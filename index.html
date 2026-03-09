@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sistem İzleme Paneli v2</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="title">
+        <h1 id="title">Sistem İzleme Paneli</h1>
+        <p class="sub" id="subtitle">Arka planda çalışan servislerin durumunu gösteren görsel prototip.</p>
+      </div>
+
+      <div class="right">
+        <button class="lang" id="langBtn">EN</button>
+        <div class="pill">Last refresh: <span id="clock">--:--:--</span></div>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="overall">
+        <span class="dot green" id="overallDot" aria-hidden="true"></span>
+        <div class="overallText">
+          <div class="overallTitle" id="overallTitle">Sistem Durumu</div>
+          <div class="overallSub" id="overallSub">Genel servis durumu burada gösterilir.</div>
+        </div>
+      </div>
+    </section>
+
+    <main class="grid" id="grid"></main>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
