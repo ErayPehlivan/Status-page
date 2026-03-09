@@ -3,7 +3,7 @@ let lang = "tr";
 const t = {
   tr: {
     title: "Sistem İzleme Paneli",
-    subtitle: "Arka planda çalışan servislerin durumunu gösteren görsel prototip.",
+    subtitle: "Gerçek veri ile beslenen servis durum paneli.",
     overallOk: "Tüm Sistemler Çalışıyor",
     overallWarn: "Kısmi Servis Sorunu",
     overallDown: "Kritik Servis Problemi",
@@ -13,14 +13,14 @@ const t = {
     active: "Aktif",
     maintenance: "Bakımda",
     down: "Çalışmıyor",
-    badge: "Canlı Prototip",
-    metaLeft: "uptime",
-    metaRight: "latency",
-    desc: "Durum takibi için görsel servis kartı"
+    badge: "Canlı Veri",
+    metaLeft: "bölge",
+    metaRight: "güncelleme",
+    desc: "API üzerinden anlık saat verisi çekiliyor"
   },
   en: {
     title: "System Status Panel",
-    subtitle: "Visual prototype showing background service status.",
+    subtitle: "System status panel powered by live API data.",
     overallOk: "All Systems Operational",
     overallWarn: "Partial Service Disruption",
     overallDown: "Critical Service Issue",
@@ -30,22 +30,43 @@ const t = {
     active: "Active",
     maintenance: "Maintenance",
     down: "Down",
-    badge: "Live Prototype",
-    metaLeft: "uptime",
-    metaRight: "latency",
-    desc: "Visual service card for status tracking"
+    badge: "Live Data",
+    metaLeft: "zone",
+    metaRight: "updated",
+    desc: "Live time data is fetched from API"
   }
 };
 
+// Şimdilik servis isimlerini koruyoruz, sadece gerçek veri kaynağı ekliyoruz
 const services = [
-  { name: "AI Music Engine", status: "active", uptime: "99.98%", latency: "42ms" },
-  { name: "Data Analyzer", status: "active", uptime: "99.95%", latency: "38ms" },
-  { name: "User Database", status: "maintenance", uptime: "—", latency: "—" },
-  { name: "System Cloud", status: "active", uptime: "100%", latency: "21ms" },
-  { name: "Notification Service", status: "active", uptime: "99.91%", latency: "25ms" },
-  { name: "API Gateway", status: "active", uptime: "99.97%", latency: "18ms" },
-  { name: "Payment Service", status: "down", uptime: "97.40%", latency: "—" },
-  { name: "Analytics Engine", status: "active", uptime: "99.89%", latency: "31ms" }
+  {
+    name: "AI Music Engine",
+    timezone: "Europe/Istanbul",
+    status: "active",
+    currentTime: "--:--:--",
+    updatedAt: "--:--:--"
+  },
+  {
+    name: "Data Analyzer",
+    timezone: "Europe/London",
+    status: "active",
+    currentTime: "--:--:--",
+    updatedAt: "--:--:--"
+  },
+  {
+    name: "User Database",
+    timezone: "America/New_York",
+    status: "maintenance",
+    currentTime: "--:--:--",
+    updatedAt: "--:--:--"
+  },
+  {
+    name: "System Cloud",
+    timezone: "Asia/Tokyo",
+    status: "active",
+    currentTime: "--:--:--",
+    updatedAt: "--:--:--"
+  }
 ];
 
 function getStatusText(status){
@@ -64,6 +85,46 @@ function getCardClass(status){
   if(status === "maintenance") return "yellowCard";
   if(status === "down") return "redCard";
   return "";
+}
+
+function formatTimeFromDatetime(datetimeString){
+  const date = new Date(datetimeString);
+  const h = String(date.getHours()).padStart(2, "0");
+  const m = String(date.getMinutes()).padStart(2, "0");
+  const s = String(date.getSeconds()).padStart(2, "0");
+  return `${h}:${m}:${s}`;
+}
+
+async function fetchServiceData(service){
+  try {
+    const response = await fetch(`https://worldtimeapi.org/api/timezone/${service.timezone}`);
+
+    if (!response.ok) {
+      throw new Error("API error");
+    }
+
+    const data = await response.json();
+
+    service.currentTime = formatTimeFromDatetime(data.datetime);
+    service.updatedAt = new Date().toLocaleTimeString("tr-TR");
+    
+    // User Database'i örnek olarak bakımda bırakıyoruz
+    if (service.name === "User Database") {
+      service.status = "maintenance";
+    } else {
+      service.status = "active";
+    }
+
+  } catch (error) {
+    service.status = "down";
+    service.currentTime = "--:--:--";
+    service.updatedAt = new Date().toLocaleTimeString("tr-TR");
+  }
+}
+
+async function refreshAllServices(){
+  await Promise.all(services.map(fetchServiceData));
+  render();
 }
 
 function renderOverall(){
@@ -119,8 +180,12 @@ function render(){
           </div>
 
           <div class="metrics">
-            <div>${t[lang].metaLeft}: <code>${s.uptime}</code></div>
-            <div>${t[lang].metaRight}: <code>${s.latency}</code></div>
+            <div>${t[lang].metaLeft}: <code>${s.timezone}</code></div>
+            <div>${t[lang].metaRight}: <code>${s.updatedAt}</code></div>
+          </div>
+
+          <div class="metrics">
+            <div>${lang === "tr" ? "saat" : "time"}: <code>${s.currentTime}</code></div>
           </div>
         </div>
       </article>
@@ -136,13 +201,19 @@ document.getElementById("langBtn").onclick = () => {
   render();
 };
 
-function tick(){
+function tickHeaderClock(){
   const d = new Date();
-  const pad = n => String(n).padStart(2,"0");
+  const pad = n => String(n).padStart(2, "0");
   document.getElementById("clock").textContent =
     `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 render();
-tick();
-setInterval(tick, 1000);
+tickHeaderClock();
+setInterval(tickHeaderClock, 1000);
+
+// İlk yüklemede veri çek
+refreshAllServices();
+
+// Her 60 saniyede bir tekrar çek
+setInterval(refreshAllServices, 60000);
