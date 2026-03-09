@@ -16,6 +16,7 @@ const t = {
     badge: "Canlı Veri",
     metaLeft: "bölge",
     metaRight: "güncelleme",
+    timeLabel: "saat",
     desc: "API üzerinden anlık saat verisi çekiliyor"
   },
   en: {
@@ -33,11 +34,11 @@ const t = {
     badge: "Live Data",
     metaLeft: "zone",
     metaRight: "updated",
+    timeLabel: "time",
     desc: "Live time data is fetched from API"
   }
 };
 
-// Şimdilik servis isimlerini koruyoruz, sadece gerçek veri kaynağı ekliyoruz
 const services = [
   {
     name: "AI Music Engine",
@@ -66,28 +67,56 @@ const services = [
     status: "active",
     currentTime: "--:--:--",
     updatedAt: "--:--:--"
+  },
+  {
+    name: "Notification Service",
+    timezone: "Europe/Berlin",
+    status: "active",
+    currentTime: "--:--:--",
+    updatedAt: "--:--:--"
+  },
+  {
+    name: "API Gateway",
+    timezone: "America/Los_Angeles",
+    status: "active",
+    currentTime: "--:--:--",
+    updatedAt: "--:--:--"
+  },
+  {
+    name: "Payment Service",
+    timezone: "Asia/Dubai",
+    status: "down",
+    currentTime: "--:--:--",
+    updatedAt: "--:--:--"
+  },
+  {
+    name: "Analytics Engine",
+    timezone: "Australia/Sydney",
+    status: "active",
+    currentTime: "--:--:--",
+    updatedAt: "--:--:--"
   }
 ];
 
-function getStatusText(status){
-  if(status === "active") return t[lang].active;
-  if(status === "maintenance") return t[lang].maintenance;
+function getStatusText(status) {
+  if (status === "active") return t[lang].active;
+  if (status === "maintenance") return t[lang].maintenance;
   return t[lang].down;
 }
 
-function getStatusColor(status){
-  if(status === "active") return "green";
-  if(status === "maintenance") return "yellow";
+function getStatusColor(status) {
+  if (status === "active") return "green";
+  if (status === "maintenance") return "yellow";
   return "red";
 }
 
-function getCardClass(status){
-  if(status === "maintenance") return "yellowCard";
-  if(status === "down") return "redCard";
+function getCardClass(status) {
+  if (status === "maintenance") return "yellowCard";
+  if (status === "down") return "redCard";
   return "";
 }
 
-function formatTimeFromDatetime(datetimeString){
+function formatTimeFromDatetime(datetimeString) {
   const date = new Date(datetimeString);
   const h = String(date.getHours()).padStart(2, "0");
   const m = String(date.getMinutes()).padStart(2, "0");
@@ -95,7 +124,7 @@ function formatTimeFromDatetime(datetimeString){
   return `${h}:${m}:${s}`;
 }
 
-async function fetchServiceData(service){
+async function fetchServiceData(service) {
   try {
     const response = await fetch(`https://worldtimeapi.org/api/timezone/${service.timezone}`);
 
@@ -107,27 +136,35 @@ async function fetchServiceData(service){
 
     service.currentTime = formatTimeFromDatetime(data.datetime);
     service.updatedAt = new Date().toLocaleTimeString("tr-TR");
-    
-    // User Database'i örnek olarak bakımda bırakıyoruz
+
     if (service.name === "User Database") {
       service.status = "maintenance";
+    } else if (service.name === "Payment Service") {
+      service.status = "down";
     } else {
       service.status = "active";
     }
 
   } catch (error) {
-    service.status = "down";
+    if (service.name === "User Database") {
+      service.status = "maintenance";
+    } else if (service.name === "Payment Service") {
+      service.status = "down";
+    } else {
+      service.status = "active";
+    }
+
     service.currentTime = "--:--:--";
     service.updatedAt = new Date().toLocaleTimeString("tr-TR");
   }
 }
 
-async function refreshAllServices(){
+async function refreshAllServices() {
   await Promise.all(services.map(fetchServiceData));
   render();
 }
 
-function renderOverall(){
+function renderOverall() {
   const hasDown = services.some(s => s.status === "down");
   const hasMaintenance = services.some(s => s.status === "maintenance");
 
@@ -137,11 +174,11 @@ function renderOverall(){
 
   overallDot.className = "dot";
 
-  if(hasDown){
+  if (hasDown) {
     overallTitle.textContent = t[lang].overallDown;
     overallSub.textContent = t[lang].overallSubDown;
     overallDot.classList.add("red");
-  } else if(hasMaintenance){
+  } else if (hasMaintenance) {
     overallTitle.textContent = t[lang].overallWarn;
     overallSub.textContent = t[lang].overallSubWarn;
     overallDot.classList.add("yellow");
@@ -152,7 +189,7 @@ function renderOverall(){
   }
 }
 
-function render(){
+function render() {
   document.getElementById("title").textContent = t[lang].title;
   document.getElementById("subtitle").textContent = t[lang].subtitle;
 
@@ -185,7 +222,7 @@ function render(){
           </div>
 
           <div class="metrics">
-            <div>${lang === "tr" ? "saat" : "time"}: <code>${s.currentTime}</code></div>
+            <div>${t[lang].timeLabel}: <code>${s.currentTime}</code></div>
           </div>
         </div>
       </article>
@@ -201,7 +238,7 @@ document.getElementById("langBtn").onclick = () => {
   render();
 };
 
-function tickHeaderClock(){
+function tickHeaderClock() {
   const d = new Date();
   const pad = n => String(n).padStart(2, "0");
   document.getElementById("clock").textContent =
@@ -212,8 +249,5 @@ render();
 tickHeaderClock();
 setInterval(tickHeaderClock, 1000);
 
-// İlk yüklemede veri çek
 refreshAllServices();
-
-// Her 60 saniyede bir tekrar çek
 setInterval(refreshAllServices, 60000);
