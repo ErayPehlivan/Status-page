@@ -13,11 +13,14 @@ const t = {
     active: "Aktif",
     maintenance: "Bakımda",
     down: "Çalışmıyor",
+    loading: "Yükleniyor",
     badge: "Canlı Veri",
     metaLeft: "bölge",
     metaRight: "güncelleme",
     timeLabel: "saat",
-    desc: "API üzerinden anlık saat verisi çekiliyor"
+    desc: "API üzerinden anlık saat verisi çekiliyor",
+    loadingTitle: "Veriler Yükleniyor",
+    loadingSub: "Servis verileri API üzerinden alınıyor."
   },
   en: {
     title: "System Status Panel",
@@ -31,11 +34,14 @@ const t = {
     active: "Active",
     maintenance: "Maintenance",
     down: "Down",
+    loading: "Loading",
     badge: "Live Data",
     metaLeft: "zone",
     metaRight: "updated",
     timeLabel: "time",
-    desc: "Live time data is fetched from API"
+    desc: "Live time data is fetched from API",
+    loadingTitle: "Loading Data",
+    loadingSub: "Service data is being fetched from the API."
   }
 };
 
@@ -43,68 +49,70 @@ const services = [
   {
     name: "AI Music Engine",
     timezone: "Europe/Istanbul",
-    status: "active",
+    status: "loading",
     currentTime: "--:--:--",
     updatedAt: "--:--:--"
   },
   {
     name: "Data Analyzer",
     timezone: "Europe/London",
-    status: "active",
+    status: "loading",
     currentTime: "--:--:--",
     updatedAt: "--:--:--"
   },
   {
     name: "User Database",
     timezone: "America/New_York",
-    status: "maintenance",
+    status: "loading",
     currentTime: "--:--:--",
     updatedAt: "--:--:--"
   },
   {
     name: "System Cloud",
     timezone: "Asia/Tokyo",
-    status: "active",
+    status: "loading",
     currentTime: "--:--:--",
     updatedAt: "--:--:--"
   },
   {
     name: "Notification Service",
     timezone: "Europe/Berlin",
-    status: "active",
+    status: "loading",
     currentTime: "--:--:--",
     updatedAt: "--:--:--"
   },
   {
     name: "API Gateway",
     timezone: "America/Los_Angeles",
-    status: "active",
+    status: "loading",
     currentTime: "--:--:--",
     updatedAt: "--:--:--"
   },
   {
     name: "Payment Service",
     timezone: "Asia/Dubai",
-    status: "down",
+    status: "loading",
     currentTime: "--:--:--",
     updatedAt: "--:--:--"
   },
   {
     name: "Analytics Engine",
     timezone: "Australia/Sydney",
-    status: "active",
+    status: "loading",
     currentTime: "--:--:--",
     updatedAt: "--:--:--"
   }
 ];
 
 function getStatusText(status) {
+  if (status === "loading") return t[lang].loading;
   if (status === "active") return t[lang].active;
   if (status === "maintenance") return t[lang].maintenance;
   return t[lang].down;
 }
 
 function getStatusColor(status) {
+  if (status === "loading") return "gray";
   if (status === "active") return "green";
   if (status === "maintenance") return "yellow";
   return "red";
@@ -124,6 +132,12 @@ function formatTimeFromDatetime(datetimeString) {
   return `${h}:${m}:${s}`;
 }
 
+function getDefaultStatusByName(serviceName) {
+  if (serviceName === "User Database") return "maintenance";
+  if (serviceName === "Payment Service") return "down";
+  return "active";
+}
+
 async function fetchServiceData(service) {
   try {
     const response = await fetch(`https://worldtimeapi.org/api/timezone/${service.timezone}`);
@@ -136,35 +150,21 @@ async function fetchServiceData(service) {
 
     service.currentTime = formatTimeFromDatetime(data.datetime);
     service.updatedAt = new Date().toLocaleTimeString("tr-TR");
-
-    if (service.name === "User Database") {
-      service.status = "maintenance";
-    } else if (service.name === "Payment Service") {
-      service.status = "down";
-    } else {
-      service.status = "active";
-    }
-
+    service.status = getDefaultStatusByName(service.name);
   } catch (error) {
-    if (service.name === "User Database") {
-      service.status = "maintenance";
-    } else if (service.name === "Payment Service") {
-      service.status = "down";
-    } else {
-      service.status = "active";
-    }
-
+    service.status = getDefaultStatusByName(service.name);
     service.currentTime = "--:--:--";
     service.updatedAt = new Date().toLocaleTimeString("tr-TR");
   }
 }
 
 async function refreshAllServices() {
-  await Promise.all(services.map(fetchServiceData));
+  await Promise.allSettled(services.map(fetchServiceData));
   render();
 }
 
 function renderOverall() {
+  const hasLoading = services.some(s => s.status === "loading");
   const hasDown = services.some(s => s.status === "down");
   const hasMaintenance = services.some(s => s.status === "maintenance");
 
@@ -174,7 +174,11 @@ function renderOverall() {
 
   overallDot.className = "dot";
 
-  if (hasDown) {
+  if (hasLoading) {
+    overallTitle.textContent = t[lang].loadingTitle;
+    overallSub.textContent = t[lang].loadingSub;
+    overallDot.classList.add("gray");
+  } else if (hasDown) {
     overallTitle.textContent = t[lang].overallDown;
     overallSub.textContent = t[lang].overallSubDown;
     overallDot.classList.add("red");
@@ -245,9 +249,12 @@ function tickHeaderClock() {
     `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-render();
 tickHeaderClock();
 setInterval(tickHeaderClock, 1000);
 
+// Önce loading görünümü
+render();
+
+// Sonra API verisini çek
 refreshAllServices();
 setInterval(refreshAllServices, 60000);

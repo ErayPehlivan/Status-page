@@ -10,6 +10,7 @@
   --green:#36f9a6;
   --yellow:#ffb020;
   --red:#ff4d6d;
+  --gray:#7f8aa3;
 
   --cyan:#2de2ff;
   --pink:#ff3df5;
@@ -272,6 +273,11 @@ body{
 .dot.red{
   background:var(--red);
   box-shadow: 0 0 8px rgba(255,77,109,.80), 0 0 18px rgba(255,77,109,.60), 0 0 28px rgba(255,77,109,.30);
+}
+
+.dot.gray{
+  background:var(--gray);
+  box-shadow: 0 0 8px rgba(127,138,163,.55), 0 0 18px rgba(127,138,163,.35), 0 0 28px rgba(127,138,163,.15);
 }
 
 @media (max-width: 1100px){
